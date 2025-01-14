@@ -1,12 +1,32 @@
 "use client";
 
-import React, {ChangeEvent, ChangeEventHandler, useEffect, useState} from "react";
+import React, {useEffect, useState} from "react";
+import { AgGridReact } from 'ag-grid-react';
+import { AllCommunityModule, ModuleRegistry, ColDef } from 'ag-grid-community';
 import {Advocate} from '@/app/types';
+
+ModuleRegistry.registerModules([AllCommunityModule]);
 
 export default function Home() {
   const [advocates, setAdvocates] = useState([]);
   const [filteredAdvocates, setFilteredAdvocates] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
+  const colDefs: ColDef[] = [
+    { field: "firstName" },
+    { field: "lastName" },
+    { field: "city" },
+    { field: "degree" },
+    {
+      field: "specialties",
+      flex: 1,
+      valueGetter: (params) => params.data.specialties.join(', '),
+      cellStyle: {
+        fontSize: '0.9rem', // reduce font size slightly
+      },
+    },
+    { field: "yearsOfExperience" },
+    { field: "phoneNumber" },
+  ];
 
   useEffect(() => {
     console.log("fetching advocates...");
@@ -24,7 +44,7 @@ export default function Home() {
     setSearchTerm(newSearchTerm);
 
     console.log("filtering advocates...");
-    const filteredAdvocates = advocates.filter((advocate: Advocate) => {
+    const filteredAdvocates = newSearchTerm !== '' ? advocates.filter((advocate: Advocate) => {
       return (
         advocate.firstName.includes(searchTerm) ||
         advocate.lastName.includes(searchTerm) ||
@@ -33,7 +53,7 @@ export default function Home() {
         advocate.specialties.includes(searchTerm) ||
         advocate.yearsOfExperience.toString(10).includes(searchTerm)
       );
-    });
+    }) : advocates;
 
     setFilteredAdvocates(filteredAdvocates);
   };
@@ -58,38 +78,14 @@ export default function Home() {
       </div>
       <br />
       <br />
-      <table>
-        <thead>
-          <tr>
-            <th>First Name</th>
-            <th>Last Name</th>
-            <th>City</th>
-            <th>Degree</th>
-            <th>Specialties</th>
-            <th>Years of Experience</th>
-            <th>Phone Number</th>
-          </tr>
-        </thead>
-        <tbody>
-          {filteredAdvocates.map((advocate: Advocate, index) => {
-            return (
-              <tr key={`advocate-${index}`}>
-                <td>{advocate.firstName}</td>
-                <td>{advocate.lastName}</td>
-                <td>{advocate.city}</td>
-                <td>{advocate.degree}</td>
-                <td>
-                  {advocate.specialties.map((specialty, i) => (
-                    <div key={`specialty-${index}-${i}`}>{specialty}</div>
-                  ))}
-                </td>
-                <td>{advocate.yearsOfExperience}</td>
-                <td>{advocate.phoneNumber}</td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
+      <div
+        style={{height: 750}}
+      >
+        <AgGridReact
+          rowData={filteredAdvocates}
+          columnDefs={colDefs}
+        />
+      </div>
     </main>
   );
 }
