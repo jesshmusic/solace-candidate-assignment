@@ -1,31 +1,46 @@
 "use client";
 
-import React, {useEffect, useState} from "react";
-import { AgGridReact } from 'ag-grid-react';
-import { AllCommunityModule, ModuleRegistry, ColDef } from 'ag-grid-community';
-import {Advocate} from '@/app/types';
+import React, { useEffect, useState, useCallback } from "react";
+import { AgGridReact } from "ag-grid-react";
+import { AllCommunityModule, ModuleRegistry, ColDef } from "ag-grid-community";
+import { Advocate } from "@/app/types";
+import SearchComponent from "@/app/components/SearchComponent";
 
 ModuleRegistry.registerModules([AllCommunityModule]);
 
 export default function Home() {
-  const [advocates, setAdvocates] = useState([]);
-  const [filteredAdvocates, setFilteredAdvocates] = useState([]);
-  const [searchTerm, setSearchTerm] = useState("");
+  const [advocates, setAdvocates] = useState<Advocate[]>([]);
+  const [filteredAdvocates, setFilteredAdvocates] = useState<Advocate[]>([]);
+  const [searchTerm, setSearchTerm] = useState<string>("");
+
   const colDefs: ColDef[] = [
-    { field: "firstName" },
-    { field: "lastName" },
-    { field: "city" },
-    { field: "degree" },
+    { field: "firstName", filter: true },
+    { field: "lastName", filter: true },
+    { field: "city", filter: true },
+    { field: "degree", filter: true },
     {
       field: "specialties",
+      filter: true,
       flex: 1,
-      valueGetter: (params) => params.data.specialties.join(', '),
+      valueFormatter: useCallback((params: any) => {
+        return params.data?.specialties?.join(", ") || "";
+      }, []),
       cellStyle: {
-        fontSize: '0.9rem', // reduce font size slightly
+        fontSize: "0.7rem",
       },
     },
-    { field: "yearsOfExperience" },
-    { field: "phoneNumber" },
+    { field: "yearsOfExperience", filter: true },
+    {
+      field: "phoneNumber",
+      filter: true,
+      valueFormatter: useCallback((params: any) => {
+        const phoneNumber: string = params.value?.toString() || "";
+        if (phoneNumber.length === 10) {
+          return `(${phoneNumber.slice(0, 3)}) ${phoneNumber.slice(3, 6)}-${phoneNumber.slice(6)}`;
+        }
+        return phoneNumber;
+      }, []),
+    },
   ];
 
   useEffect(() => {
@@ -38,53 +53,46 @@ export default function Home() {
     });
   }, []);
 
-  const onChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const newSearchTerm = event.target.value;
-
-    setSearchTerm(newSearchTerm);
-
+  useEffect(() => {
     console.log("filtering advocates...");
-    const filteredAdvocates = newSearchTerm !== '' ? advocates.filter((advocate: Advocate) => {
+    const filtered = advocates.filter((advocate: Advocate) => {
       return (
-        advocate.firstName.includes(searchTerm) ||
-        advocate.lastName.includes(searchTerm) ||
-        advocate.city.includes(searchTerm) ||
-        advocate.degree.includes(searchTerm) ||
-        advocate.specialties.includes(searchTerm) ||
+        advocate.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        advocate.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        advocate.city.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        advocate.degree.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        advocate.specialties
+          .join(", ")
+          .toLowerCase()
+          .includes(searchTerm.toLowerCase()) ||
         advocate.yearsOfExperience.toString(10).includes(searchTerm)
       );
-    }) : advocates;
+    });
+    setFilteredAdvocates(filtered);
+  }, [advocates, searchTerm]);
 
-    setFilteredAdvocates(filteredAdvocates);
+  const onChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const newSearchTerm = event.target.value;
+    setSearchTerm(newSearchTerm);
   };
 
   const onClick = () => {
-    console.log(advocates);
+    setSearchTerm("");
     setFilteredAdvocates(advocates);
   };
 
   return (
     <main style={{ margin: "24px" }}>
-      <h1>Solace Advocates</h1>
-      <br />
-      <br />
-      <div>
-        <p>Search</p>
-        <p>
-          Searching for: <span id="search-term">{searchTerm}</span>
-        </p>
-        <input style={{ border: "1px solid black" }} onChange={onChange} />
-        <button onClick={onClick}>Reset Search</button>
-      </div>
-      <br />
-      <br />
-      <div
-        style={{height: 750}}
-      >
-        <AgGridReact
-          rowData={filteredAdvocates}
-          columnDefs={colDefs}
-        />
+      <h1 style={{ fontSize: "2rem", marginBottom: "1rem" }}>
+        Solace Advocates
+      </h1>
+      <SearchComponent
+        searchTerm={searchTerm}
+        onChange={onChange}
+        onClick={onClick}
+      />
+      <div style={{ height: 750 }}>
+        <AgGridReact rowData={filteredAdvocates} columnDefs={colDefs} />
       </div>
     </main>
   );
